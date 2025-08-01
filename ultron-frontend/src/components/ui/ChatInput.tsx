@@ -28,6 +28,13 @@ export function ChatInput({ onSend, placeholder = "Type your message..." }: Chat
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as any);
+    }
+  };
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const imageInputRef = React.useRef<HTMLInputElement>(null);
   const docInputRef = React.useRef<HTMLInputElement>(null);
@@ -68,10 +75,10 @@ export function ChatInput({ onSend, placeholder = "Type your message..." }: Chat
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="fixed bottom-4 left-1/2 -translate-x-[30%] z-10 max-w-2xl w-full flex flex-col items-center space-y-2">
+      <div className="w-full flex flex-col items-center space-y-2">
         {/* Attachments Preview */}
         {attachments.length > 0 && (
-          <div className="w-full flex flex-wrap gap-3 bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-lg mb-2">
+          <div className="w-full flex flex-wrap gap-3 bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-lg mb-2">
             {attachments.map((att, idx) => (
               <div key={idx} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2">
                 {att.type === 'image' && att.url ? (
@@ -89,11 +96,10 @@ export function ChatInput({ onSend, placeholder = "Type your message..." }: Chat
         )}
         <div
           className={`
-            w-full flex items-center space-x-3 bg-gray-50 dark:bg-gray-800 rounded-xl p-3
+            w-full flex items-center space-x-3 bg-white dark:bg-gray-800 rounded-xl p-3
             border-2 transition-all duration-300
-            ${isFocused ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-gray-200 dark:border-gray-700'}
+            ${isFocused ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-gray-200 dark:border-gray-700 shadow-sm'}
           `}
-          style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           <DropdownMenu
             trigger={
@@ -156,6 +162,7 @@ export function ChatInput({ onSend, placeholder = "Type your message..." }: Chat
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={placeholder}

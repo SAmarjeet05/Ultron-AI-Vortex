@@ -194,52 +194,7 @@ export function EnhancedSidebar({
             </div>
           </div>
         </div>
-      )}
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {formatTimestamp(chat)}
-                    </div>
-                  </div>
-                  
-                  {/* Context Menu - Only closes on outside click, not hover */}
-                  <div className="transition-opacity duration-200">
-                    <DropdownMenu
-                      trigger={
-                        <button
-                          className="p-1 hover:bg-muted rounded transition-colors"
-                          onClick={(e) => e.stopPropagation()}
-                          aria-label="Chat options"
-                        >
-                          <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                      }
-                    >
-                      <DropdownMenuItem onClick={() => handleRenameClick(chat)}>
-                        <Edit3 className="w-4 h-4 mr-2" />
-                        Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onExportChat(chat.id)}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onSaveChat(chat.id)}>
-                        <Bookmark className="w-4 h-4 mr-2" />
-                        Save
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDeleteClick(chat.id)}
-                        destructive
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
-      </div>
     </div>
   );
 }

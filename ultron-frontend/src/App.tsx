@@ -122,9 +122,26 @@ function App() {
   const handleExportConversation = (id: string) => {
     const conversation = conversations.find(conv => conv.id === id);
     if (conversation) {
-      // Mock export functionality
-      console.log('Exporting conversation:', conversation);
-      alert(`Exporting "${conversation.title}" - this would download the conversation as a file.`);
+      // Export as JSON
+      const exportData = {
+        id: conversation.id,
+        title: conversation.title,
+        category: conversation.category,
+        messages: conversation.messages || [],
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt,
+        exportedAt: new Date().toISOString()
+      };
+      
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = `${conversation.title || 'chat'}-${conversation.id}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
     }
   };
 
