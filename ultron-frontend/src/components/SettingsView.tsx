@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, User, Bell, Shield, Palette, Globe, Database, Zap, Settings } from 'lucide-react';
 import { Sidebar } from './layout/Sidebar';
-import type { CategoryDetailProps } from '../types';
+import type { SettingsViewProps } from '../types';
 
 interface SettingSection {
   id: string;
@@ -55,7 +55,7 @@ const settingSections: SettingSection[] = [
   }
 ];
 
-export function SettingsView({ category, onBack }: CategoryDetailProps) {
+export function SettingsView({ category, onBack }: SettingsViewProps) {
   const [activeSection, setActiveSection] = useState<string>('profile');
 
   const renderSettingContent = () => {

@@ -11,10 +11,17 @@
   },
   "dependencies": {
     "clsx": "^2.1.1",
+    "emojilib": "^2.4.0",
+    "framer-motion": "^12.23.12",
     "lucide-react": "^0.344.0",
+    "marked": "^16.1.1",
+    "path-browserify": "^1.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwind-merge": "^3.3.1"
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.3.1",
+    "tailwind-scrollbar": "^4.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",

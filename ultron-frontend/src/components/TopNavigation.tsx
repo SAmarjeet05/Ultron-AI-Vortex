@@ -19,6 +19,7 @@ interface TopNavigationProps {
 const navigationCards: NavigationCard[] = [
   {
     id: 'chat',
+    slug: 'chat',
     icon: 'Brain',
     label: 'Chat Assistant',
     color: '#3B82F6',
@@ -26,6 +27,7 @@ const navigationCards: NavigationCard[] = [
   },
   {
     id: 'code',
+    slug: 'Code', 
     icon: 'Code',
     label: 'Code Companion',
     color: '#14B8A6',
@@ -33,6 +35,7 @@ const navigationCards: NavigationCard[] = [
   },
   {
     id: 'image',
+    slug: 'Image',
     icon: 'Image',
     label: 'Image Processing',
     color: '#8B5CF6',
@@ -40,6 +43,7 @@ const navigationCards: NavigationCard[] = [
   },
   {
     id: 'document',
+    slug: 'Document',
     icon: 'FileText',
     label: 'Document Analyzer',
     color: '#F97316',
@@ -47,6 +51,7 @@ const navigationCards: NavigationCard[] = [
   },
   {
     id: 'writing',
+    slug: 'Writing',
     icon: 'PenTool',
     label: 'Creative Writing',
     color: '#EF4444',
@@ -54,6 +59,7 @@ const navigationCards: NavigationCard[] = [
   },
   {
     id: 'knowledge',
+    slug: 'Knowledge',
     icon: 'HelpCircle',
     label: 'Knowledge Q&A',
     color: '#10B981',
@@ -61,6 +67,7 @@ const navigationCards: NavigationCard[] = [
   },
   {
     id: 'voice',
+    slug: 'Voice',
     icon: 'Mic',
     label: 'Voice Assistant',
     color: '#F59E0B',
@@ -68,6 +75,7 @@ const navigationCards: NavigationCard[] = [
   },
   {
     id: 'settings',
+    slug: 'Settings',
     icon: 'Settings',
     label: 'Settings',
     color: '#6B7280',
@@ -101,12 +109,8 @@ export function TopNavigation({ onCardClick }: TopNavigationProps) {
           <input
             type="text"
             placeholder="Search chats or content"
-            className="w-full max-w-lg px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full max-w-lg px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
           />
-        </div>
-        {/* Right: Settings Icon */}
-        <div className="flex items-center">
-          <Settings className="w-7 h-7 text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-500 transition" />
         </div>
       </div>
 

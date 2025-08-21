@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+pydantic
+ollama  # if you're using the Python API for Ollama
+httpx
+pillow
+PyMuPDF
+pytesseract
+python-docx
+PyPDF2
+python-multipart
+docx

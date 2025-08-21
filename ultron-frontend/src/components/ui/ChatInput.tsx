@@ -1,191 +1,243 @@
-import React, { useState } from 'react';
-import { Send, Mic, Paperclip, Upload, FileText, Image, Link } from 'lucide-react';
-import { DropdownMenu, DropdownMenuItem } from './DropdownMenu';
+import React, { useRef, useState, useEffect } from "react";
+import { Paperclip, Send, Mic, StopCircle, Link as LinkIcon, Loader2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuItem } from "./DropdownMenu";
+import type { FilePreview } from '../../types';
+import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 
 interface ChatInputProps {
-  onSend: (message: string) => void;
+  onSend: (msg: string, attachments: FilePreview[]) => void;
   placeholder?: string;
+  autoGrow?: boolean;
+  isTyping: boolean;
+  onStop?: () => void;
 }
 
-export function ChatInput({ onSend, placeholder = "Type your message..." }: ChatInputProps) {
-  const [message, setMessage] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
-  const [attachments, setAttachments] = useState<Array<{ type: string; name?: string; url?: string }>>([]);
+export default function ChatInput({ onSend, isTyping, onStop }: ChatInputProps) {
+  const [message, setMessage] = useState("");
+  const [attachments, setAttachments] = useState<FilePreview[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+    }
+  }, [message]);
+
+  const handleSend = (e?: React.FormEvent | KeyboardEvent) => {
+    if (e) e.preventDefault();
+    console.log("handleSend called, message:", message, "attachments:", attachments);
+    if (!message.trim() && attachments.length === 0) return;
+    if (isListening) {
+      stopListening();
+    }
+    onSend(message.trim(), attachments);
+    setMessage("");
+    setAttachments([]);
+  };
+
+
+  const {
+    startListening,
+    stopListening,
+    isListening
+  } = useSpeechRecognition((newChunk: string) => {
+    setMessage((prev) => prev + " " + newChunk);
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles: FilePreview[] = Array.from(files).map((file) => {
+      let type: FilePreview["type"] = "file";
+      const lower = file.type.toLowerCase();
+      if (lower.startsWith("image/")) type = "image";
+      else if (file.name.match(/\.(pdf|doc|docx|txt)$/i)) type = "document";
+
+      return {
+        id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+        file,
+        url: URL.createObjectURL(file),
+        type,
+      };
+    });
+
+    setAttachments((prev) => [...prev, ...newFiles]);
+    e.target.value = "";
+  };
+
+  const handleAttachLink = () => {
+    const url = prompt("Paste link:");
+    if (url) {
+      setAttachments((prev) => [
+        ...prev,
+        {
+          id: `${url}-${Date.now()}`,
+          url,
+          type: "link",
+        },
+      ]);
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (message.trim() || attachments.length > 0) {
-      // Build markup for all attachments
-      let attachmentMarkup = attachments.map(att => {
-        if (att.type === 'image' && att.url) return `[image:${att.url}]`;
-        if ((att.type === 'file' || att.type === 'document') && att.name) return `[file:${att.name}]`;
-        return '';
-      }).join(' ');
-      const fullMessage = [attachmentMarkup, message.trim()].filter(Boolean).join(' ');
-      onSend(fullMessage);
-      setMessage('');
-      setAttachments([]);
-    }
-  };
+    setIsDragging(false);
+    if (!e.dataTransfer.files?.length) return;
 
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const imageInputRef = React.useRef<HTMLInputElement>(null);
-  const docInputRef = React.useRef<HTMLInputElement>(null);
+    const dropped: FilePreview[] = Array.from(e.dataTransfer.files).map((file) => {
+      let type: FilePreview["type"] = "file";
+      const lower = file.type.toLowerCase();
+      if (lower.startsWith("image/")) type = "image";
+      else if (file.name.match(/\.(pdf|doc|docx|txt)$/i)) type = "document";
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length) {
-      const newAttachments = files.map(file => {
-        if (type === 'image') {
-          const url = URL.createObjectURL(file);
-          return { type: 'image', url, name: file.name };
-        } else {
-          return { type, name: file.name };
-        }
-      });
-      setAttachments(prev => [...prev, ...newAttachments]);
-    }
-    e.target.value = '';
-  };
+      return {
+        id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+        file,
+        url: URL.createObjectURL(file),
+        type,
+      };
+    });
 
-  const handleAttachFile = (type: string) => {
-    if (type === 'file' && fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-    if (type === 'image' && imageInputRef.current) {
-      imageInputRef.current.click();
-    }
-    if (type === 'document' && docInputRef.current) {
-      docInputRef.current.click();
-    }
-    if (type === 'link') {
-      const url = prompt('Paste the link to attach:');
-      if (url) {
-        setAttachments(prev => [...prev, { type: 'file', name: url }]);
-      }
-    }
+    setAttachments((prev) => [...prev, ...dropped]);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full">
-      <div className="fixed bottom-4 left-1/2 -translate-x-[30%] z-10 max-w-2xl w-full flex flex-col items-center space-y-2">
-        {/* Attachments Preview */}
-        {attachments.length > 0 && (
-          <div className="w-full flex flex-wrap gap-3 bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-lg mb-2">
-            {attachments.map((att, idx) => (
-              <div key={idx} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2">
-                {att.type === 'image' && att.url ? (
-                  <img src={att.url} alt={att.name} className="w-12 h-12 object-cover rounded" />
-                ) : (
-                  <FileText className="w-5 h-5 text-gray-400" />
+    <form
+      onSubmit={handleSend}
+      onDrop={handleDrop}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      }}
+      onDragLeave={() => setIsDragging(false)}
+      className={`fixed bottom-7 left-1/2 -translate-x-[36%] max-w-4xl w-full transition
+        ${isDragging ? "border-dashed border-2 border-blue-500 bg-blue-50/40" : ""}`}
+    >
+      {attachments.length > 0 && (
+        <div className="mb-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent bg-white dark:bg-gray-900 p-2 rounded-lg shadow">
+          <div className="flex gap-2 min-w-max">
+            {attachments.map((att) => (
+              <div
+                key={att.id}
+                className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2 text-xs relative"
+              >
+                {att.type === "image" && att.url && (
+                  <img src={att.url} alt={att.file?.name} className="w-8 h-8 object-cover rounded" />
                 )}
-                <span className="text-sm text-gray-700 dark:text-gray-300 max-w-[120px] truncate">{att.name}</span>
-                <button type="button" className="ml-2 text-red-500 hover:text-red-700" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}>
-                  &times;
+                {(att.type === "file" || att.type === "document") && (
+                  <>
+                    <Paperclip className="w-4 h-4 text-gray-500" />
+                    <span className="truncate max-w-[120px]">{att.file?.name}</span>
+                  </>
+                )}
+                {att.type === "link" && att.url && (
+                  <>
+                    <LinkIcon className="w-4 h-4 text-gray-500" />
+                    <a href={att.url} target="_blank" rel="noopener noreferrer" className="truncate max-w-[120px] hover:underline">
+                      {att.url}
+                    </a>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(att.id)}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                >
+                  ×
                 </button>
               </div>
             ))}
           </div>
-        )}
-        <div
-          className={`
-            w-full flex items-center space-x-3 bg-gray-50 dark:bg-gray-800 rounded-xl p-3
-            border-2 transition-all duration-300
-            ${isFocused ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-gray-200 dark:border-gray-700'}
-          `}
-          style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
-        >
+        </div>
+      )}
+
+      <div className="relative flex w-full">
+        <div className="flex-1 flex items-center space-x-3 bg-white dark:bg-gray-900 rounded-xl p-3 border-2 focus-within:border-blue-500 focus-within:shadow-md">
           <DropdownMenu
+            align="start"
+            direction="up"
             trigger={
               <button
                 type="button"
-                className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                aria-label="Attach file"
+                className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 <Paperclip className="w-5 h-5" />
               </button>
             }
-            align="start"
-            direction="up"
-            onClose={() => {}}
           >
-            <DropdownMenuItem onClick={() => handleAttachFile('file')}>
-              <Upload className="w-4 h-4 mr-2" />
-              Upload File
+            <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>Upload File</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleAttachLink}>
+              Attach Link
+              <LinkIcon className="ml-2 h-4 w-4" />
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleAttachFile('document')}>
-              <FileText className="w-4 h-4 mr-2" />
-              Attach Document
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleAttachFile('image')}>
-              <Image className="w-4 h-4 mr-2" />
-              Attach Image
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleAttachFile('link')}>
-              <Link className="w-4 h-4 mr-2" />
-              Add Link
-            </DropdownMenuItem>
-            {/* Hidden file inputs for attachments */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              style={{ display: 'none' }}
-              onChange={(e) => handleFileChange(e, 'file')}
-              accept="*"
-              multiple
-            />
-            <input
-              type="file"
-              ref={imageInputRef}
-              style={{ display: 'none' }}
-              onChange={(e) => handleFileChange(e, 'image')}
-              accept="image/*"
-              multiple
-            />
-            <input
-              type="file"
-              ref={docInputRef}
-              style={{ display: 'none' }}
-              onChange={(e) => handleFileChange(e, 'document')}
-              accept=".pdf,.doc,.docx,.txt"
-              multiple
-            />
           </DropdownMenu>
 
-          <input
-            type="text"
+          <textarea
+            ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder={placeholder}
-            className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500"
+            placeholder="Ask your Code Companion anything..."
+            rows={1}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            disabled={isTyping}
+            className="flex-1 resize-none bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 min-h-[40px] max-h-40 overflow-y-auto"
+            style={{ lineHeight: "1.5", fontSize: "1rem" }}
           />
 
           <div className="flex items-center space-x-2">
             <button
               type="button"
-              className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Voice input"
+              onClick={() => (isListening ? stopListening() : startListening())}
+              className={`p-2 rounded-lg transition-colors ${isListening ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+              aria-label="Toggle voice input"
             >
-              <Mic className="w-5 h-5" />
+              {isListening ? <StopCircle className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
-            <button
-              type="submit"
-              disabled={!message.trim()}
-              className={`
-                p-2 rounded-lg transition-all duration-300
-                ${message.trim() 
-                  ? 'bg-blue-500 text-white hover:bg-blue-600 transform hover:scale-105' 
-                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed'
-                }
-              `}
-              aria-label="Send message"
-            >
-              <Send className="w-5 h-5" />
-            </button>
+
+            {isTyping ? (
+              <button
+                type="button"
+                onClick={onStop}
+                className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
+              >
+                <StopCircle className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!message.trim() && attachments.length === 0}
+                className={`p-2 rounded-lg transition ${message.trim() || attachments.length > 0
+                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                  : "bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed"}`}
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
+
+        <input
+          type="file"
+          hidden
+          ref={fileInputRef}
+          onClick={(e) => (e.currentTarget.value = "")}
+          onChange={handleFileChange}
+          multiple
+          accept=".pdf,.docx,.txt,.csv,image/*"
+        />
       </div>
     </form>
   );

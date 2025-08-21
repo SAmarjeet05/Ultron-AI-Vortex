@@ -1,0 +1,16 @@
+# Backend virtual environment
+Ultron-backend/myenv/
+# Frontend node modules
+Ultron-frontend/node_modules/
+
+
+# Backend Python cache
+Ultron-backend/**/__pycache__/
+Ultron-backend/**/*.pyc
+
+# Optional: system files
+.DS_Store
+Thumbs.db
+
+# Optional: log files
+*.log

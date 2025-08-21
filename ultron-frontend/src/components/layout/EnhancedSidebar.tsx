@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, MoreHorizontal, Download, Bookmark, Trash2, Edit3 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -18,6 +18,8 @@ interface EnhancedSidebarProps {
   onRenameChat: (chatId: string, newTitle: string) => void;
 }
 
+
+
 export function EnhancedSidebar({
   title,
   categorySlug,
@@ -30,21 +32,23 @@ export function EnhancedSidebar({
   onDeleteChat,
   onRenameChat
 }: EnhancedSidebarProps) {
+
   const [searchQuery, setSearchQuery] = useState('');
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
 
   const [modalDeleteId, setModalDeleteId] = useState<string | null>(null);
-  const filteredChats = useMemo(() => {
-    if (!searchQuery.trim()) return chats;
-    const query = searchQuery.toLowerCase();
-    return chats.filter(chat => {
-      if (chat.title.toLowerCase().includes(query)) return true;
-      if (chat.timestamp.toLowerCase().includes(query)) return true;
-      if (chat.lastMessage && chat.lastMessage.toLowerCase().includes(query)) return true;
-      return false;
+  const filteredChats = !searchQuery.trim()
+    ? chats
+    : chats.filter(chat => {
+      const query = searchQuery.toLowerCase();
+      return (
+        chat.title.toLowerCase().includes(query) ||
+        (chat.timestamp && chat.timestamp.toLowerCase().includes(query)) ||
+        (chat.lastMessage && chat.lastMessage.toLowerCase().includes(query))
+      );
     });
-  }, [chats, searchQuery]);
+
 
   const handleModalDelete = () => {
     if (modalDeleteId) {
@@ -66,6 +70,27 @@ export function EnhancedSidebar({
     setEditTitle(chat.title || formatChatTitle(chat));
   };
 
+  // Export chat as JSON
+  const handleExportClick = (chat: Conversation) => {
+    // Export as JSON
+    const exportData = {
+      id: chat.id,
+      title: chat.title,
+      category: chat.category,
+      messages: chat.messages || [],
+      createdAt: chat.createdAt,
+      updatedAt: chat.updatedAt,
+      exportedAt: new Date().toISOString()
+    };
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    const exportFileDefaultName = `${chat.title || 'chat'}-${chat.id}.json`;
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
   const handleRenameSubmit = (chatId: string) => {
     if (editTitle.trim()) {
       onRenameChat(chatId, editTitle.trim());
@@ -79,28 +104,47 @@ export function EnhancedSidebar({
     setEditTitle('');
   };
 
-  const formatChatTitle = (chat: Conversation) => {
-    return chat.title || new Date(chat.createdAt || chat.timestamp).toLocaleDateString();
+  type ExtendedConversation = Conversation & {
+    chat_name?: string;
+    created_at?: string;
   };
 
-  const formatTimestamp = (chat: Conversation) => {
-    const date = new Date(chat.updatedAt || chat.timestamp);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
-    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
-    return date.toLocaleDateString();
+
+  const formatChatTitle = (chat: ExtendedConversation) => {
+    if (chat.chat_name && chat.chat_name.trim() !== "") {
+      return chat.chat_name;
+    }
+
+    return "Untitled Chat";
   };
+
+
+
+
+
+
+
+
+  const formatTimestamp = (chat: Conversation & { created_at?: string }) => {
+    const dateValue = chat.created_at || chat.updatedAt || chat.timestamp;
+
+    if (!dateValue) return "Unknown date";
+
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return "Unknown date";
+
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  };
+
+
+
+  
 
   return (
-    <div className="w-64 bg-muted/30 dark:bg-muted/20 border-r border-border flex flex-col h-full">
+    <aside className="w-64 bg-muted/30 dark:bg-muted/20 border-r border-border flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="p-4 border-b border-border">
         <h2 className="font-semibold text-foreground mb-4">{title}</h2>
-        
-        {/* New Chat Button - Top Priority */}
         <Button
           variant="default"
           size="sm"
@@ -110,8 +154,6 @@ export function EnhancedSidebar({
           <Plus className="w-4 h-4 mr-2" />
           New Chat
         </Button>
-        
-        {/* Search Input */}
         <Input
           icon={<Search className="w-4 h-4" />}
           placeholder="Search chats..."
@@ -120,9 +162,8 @@ export function EnhancedSidebar({
           className="mt-2"
         />
       </div>
-
       {/* Chat List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-2">
           {filteredChats.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -136,8 +177,8 @@ export function EnhancedSidebar({
                   className={`
                     group relative flex items-center p-3 rounded-lg cursor-pointer
                     transition-all duration-200 hover:bg-muted/50 min-h-[44px]
-                    ${activeChatId === chat.id 
-                      ? 'bg-muted border-l-4 border-primary' 
+                    ${activeChatId === chat.id
+                      ? 'bg-muted border-l-4 border-primary'
                       : 'hover:bg-muted/30'
                     }
                   `}
@@ -176,6 +217,49 @@ export function EnhancedSidebar({
                         {formatChatTitle(chat)}
                       </div>
                     )}
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {formatTimestamp(chat)}
+                    </div>
+                  </div>
+                  <div className="transition-opacity duration-200">
+                    <DropdownMenu
+                      trigger={
+                        <button
+                          className="p-1 hover:bg-muted rounded transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label="Chat options"
+                        >
+                          <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      }
+                    >
+                      <DropdownMenuItem onClick={() => handleRenameClick(chat)}>
+                        <Edit3 className="w-4 h-4 mr-2" />
+                        Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExportClick(chat)}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onSaveChat(chat.id)}>
+                        <Bookmark className="w-4 h-4 mr-2" />
+                        Save
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteClick(chat.id)}
+                        destructive
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
       {/* Modal for delete confirmation */}
       {modalDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -195,51 +279,6 @@ export function EnhancedSidebar({
           </div>
         </div>
       )}
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {formatTimestamp(chat)}
-                    </div>
-                  </div>
-                  
-                  {/* Context Menu - Only closes on outside click, not hover */}
-                  <div className="transition-opacity duration-200">
-                    <DropdownMenu
-                      trigger={
-                        <button
-                          className="p-1 hover:bg-muted rounded transition-colors"
-                          onClick={(e) => e.stopPropagation()}
-                          aria-label="Chat options"
-                        >
-                          <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                      }
-                    >
-                      <DropdownMenuItem onClick={() => handleRenameClick(chat)}>
-                        <Edit3 className="w-4 h-4 mr-2" />
-                        Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onExportChat(chat.id)}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onSaveChat(chat.id)}>
-                        <Bookmark className="w-4 h-4 mr-2" />
-                        Save
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDeleteClick(chat.id)}
-                        destructive
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    </aside>
   );
 }

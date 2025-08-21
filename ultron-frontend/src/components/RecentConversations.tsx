@@ -42,10 +42,6 @@ export function RecentConversations({
                   {conversation.category}
                 </span>
               </div>
-              <div className="flex items-center text-gray-400 text-xs">
-                <Clock className="w-3 h-3 mr-1" />
-                {conversation.timestamp}
-              </div>
             </div>
             
             <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
